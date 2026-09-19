@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Loader2, LogOut } from "lucide-react";
+import { ArrowRight, Check, Loader2, LogOut, Presentation } from "lucide-react";
 import { ErrorState } from "@/components/states";
 import { ApiError, users, type User } from "@/lib/api";
 import { browserTimezone, useAuth } from "@/lib/auth";
@@ -179,6 +180,24 @@ function Perfil({ user }: { user: User }) {
           )}
         </div>
       </form>
+
+      {/* Atajo a la presentación: en el escenario no se teclea una URL. */}
+      <div className="border-t border-rule pt-7">
+        <Link
+          href="/presentacion"
+          className="group flex w-full items-center justify-between gap-3 rounded-lg border border-rule bg-paper-2 px-4 py-4 transition-colors hover:border-ink"
+        >
+          <span className="flex flex-col">
+            <span className="font-display text-[17px] leading-tight">
+              Modo presentación
+            </span>
+            <span className="station mt-1 text-ink-faint">
+              once láminas · flechas para navegar
+            </span>
+          </span>
+          <Presentation className="size-5 shrink-0 text-ink-faint transition-colors group-hover:text-ink" />
+        </Link>
+      </div>
 
       <div className="border-t border-rule pt-7">
         <button

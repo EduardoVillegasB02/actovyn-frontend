@@ -23,7 +23,11 @@ const TABS = [
   { href: "/perfil", label: "Perfil", icon: User },
 ] as const;
 
+/** Se ven sin sesión y sin navegación. */
 const OPEN_ROUTES = ["/entrar"];
+
+/** Piden sesión, pero se dibujan a pantalla completa y sin barras. */
+const BARE_ROUTES = ["/presentacion"];
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/" || pathname === "/resultado";
@@ -43,6 +47,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (isOpenRoute) return <main className="min-h-dvh">{children}</main>;
   if (status !== "authenticated") return <BootScreen />;
+
+  // La presentación ocupa toda la pantalla: una barra encima la arruinaría.
+  if (BARE_ROUTES.some((route) => pathname.startsWith(route))) {
+    return <main className="min-h-dvh">{children}</main>;
+  }
 
   return (
     <div className="flex min-h-dvh flex-col">
