@@ -20,8 +20,11 @@ export interface Repo {
 
 export interface Speaker {
   name: string;
-  /** Una línea bajo el nombre. */
+  /** El oficio, en una línea. Es lo que va bajo el nombre. */
   role: string;
+  /** Formación: carrera, casa de estudios y ciclo. */
+  study: string;
+  location: string;
   /**
    * Ruta de la foto dentro de /public. Si el archivo no existe, la lámina
    * muestra las iniciales en su lugar, así que no rompe nada dejarla puesta.
@@ -33,7 +36,9 @@ export interface Speaker {
 
 export const SPEAKER: Speaker = {
   name: "Eduardo Villegas Bojórquez",
-  role: "Desarrollador · Lima, Perú",
+  role: "Full Stack Developer",
+  study: "Ingeniería Electrónica · UNI · 10.º ciclo",
+  location: "Lima, Perú",
   photo: "/eduardo.png",
 
   links: [

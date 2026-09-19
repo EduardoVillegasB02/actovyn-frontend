@@ -176,7 +176,7 @@ function Portada() {
         realista es cada compromiso.
       </p>
       <p className="station mt-12 text-slab-soft">
-        {SPEAKER.name} · {SPEAKER.role}
+        {SPEAKER.name} · {SPEAKER.role} · {SPEAKER.location}
       </p>
     </div>
   );
@@ -191,13 +191,13 @@ function QuienSoy() {
         <h2 className="font-display text-[clamp(32px,6vw,58px)] leading-[0.98] tracking-[-0.035em] text-slab-ink">
           {SPEAKER.name}
         </h2>
-        <p className="mt-4 text-[clamp(16px,2.2vw,21px)] leading-[1.5] text-slab-mid">
+        <p className="mt-4 font-display text-[clamp(18px,2.6vw,26px)] leading-tight text-[--accent-lit]">
           {SPEAKER.role}
         </p>
-        <p className="mt-6 max-w-[40ch] text-[clamp(15px,2vw,19px)] leading-[1.55] text-slab-mid">
-          Esto lo construí solo, de punta a punta, porque el problema me pasaba
-          a mí.
+        <p className="mt-3 text-[clamp(15px,2vw,19px)] leading-[1.5] text-slab-mid">
+          {SPEAKER.study}
         </p>
+        <p className="station mt-2 text-slab-soft">{SPEAKER.location}</p>
         <SpeakerLinks />
       </div>
     </div>
