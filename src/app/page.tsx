@@ -1,69 +1,250 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useCallback, useState, type FormEvent, type KeyboardEvent } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Loader2 } from "lucide-react";
+import { ErrorState, Shimmer } from "@/components/states";
+import { StatusChip } from "@/components/intention-row";
+import { intentions, ApiError, type Intention } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { formatRelative } from "@/lib/format";
+import { saveDraft } from "@/lib/draft-store";
+import { useResource } from "@/lib/use-resource";
+import { cn } from "@/lib/utils";
+
+const PLACEHOLDER = "Mañana termino mi informe a las 11pm";
+const MIN = 3;
+const MAX = 500;
+
+/** Ejemplos que enseñan el formato sin explicarlo. */
+const EXAMPLES = [
+  "Mañana termino mi informe a las 11pm",
+  "El viernes salgo a correr a las 6am",
+  "Hoy llamo a mamá a las 8pm",
+];
+
+export default function AnalizarPage() {
+  const router = useRouter();
+  const { user, timezone } = useAuth();
+
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const trimmed = message.trim();
+  const canSubmit = trimmed.length >= MIN && trimmed.length <= MAX && !loading;
+
+  const analyze = useCallback(
+    async (text: string) => {
+      const value = text.trim();
+      if (value.length < MIN || value.length > MAX) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await intentions.analyze(value);
+        saveDraft({ message: value, result, previousScore: null });
+        router.push("/resultado");
+      } catch (e) {
+        setError(
+          e instanceof ApiError ? e.message : "Ocurrió un error inesperado.",
+        );
+        setLoading(false);
+      }
+    },
+    [router],
+  );
+
+  function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    void analyze(message);
+  }
+
+  function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
+      event.preventDefault();
+      void analyze(message);
+    }
+  }
+
+  const firstName = user && !user.is_guest ? user.name.split(" ")[0] : "";
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-10 px-5 pt-9">
+      <header className="flex flex-col gap-3">
+        <p className="station text-ink-soft">
+          {firstName ? `estación de ${firstName}` : "estación de pronóstico"}
+        </p>
+        <h1 className="text-[38px] leading-[0.98] sm:text-[52px]">
+          ¿Qué planeas
+          <br />
+          hacer?
+        </h1>
+        <p className="max-w-[46ch] text-[15px] leading-[1.65] text-ink-mid">
+          Escríbelo con día y hora, como se lo dirías a alguien. Leo tu
+          historial y te digo qué tan probable es que lo cumplas, y por qué.
+        </p>
+      </header>
+
+      <form onSubmit={onSubmit} className="flex flex-col">
+        {/* El campo es una hoja, no una caja: el filete grueso abajo es el foco. */}
+        <div
+          className={cn(
+            "relative border-b-2 pb-2 transition-colors",
+            loading ? "border-accent-ink" : "border-ink focus-within:border-accent-ink",
+          )}
+        >
+          <label htmlFor="message" className="sr-only">
+            ¿Qué planeas hacer?
+          </label>
+          <textarea
+            id="message"
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder={PLACEHOLDER}
+            disabled={loading}
+            rows={3}
+            maxLength={MAX}
+            autoFocus
+            className="w-full resize-none bg-transparent font-display text-[26px] leading-[1.22] tracking-[-0.02em] text-ink outline-none placeholder:text-ink-faint disabled:opacity-60 sm:text-[30px]"
+          />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="mt-2.5 flex items-center justify-between gap-3">
+          <span className="station hidden text-ink-faint sm:inline">
+            enter envía · shift+enter salta línea
+          </span>
+          <span className="station text-ink-faint sm:hidden">
+            toca analizar al terminar
+          </span>
+          <span className="station tnum text-ink-faint" aria-live="polite">
+            {trimmed.length}/{MAX}
+          </span>
         </div>
-      </main>
+
+        {!trimmed && !loading && (
+          <div className="mt-6 flex flex-col gap-2.5">
+            <p className="station text-ink-faint">o prueba con</p>
+            <ul className="flex flex-col gap-2">
+              {EXAMPLES.map((example) => (
+                <li key={example}>
+                  <button
+                    type="button"
+                    onClick={() => setMessage(example)}
+                    className="group flex w-full items-center justify-between gap-3 rounded-md border border-rule bg-paper-2 px-3.5 py-2.5 text-left text-sm text-ink-mid transition-colors hover:border-ink hover:text-ink"
+                  >
+                    {example}
+                    <ArrowRight className="size-3.5 shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5 group-hover:text-ink" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {error && (
+          <ErrorState
+            message={error}
+            onRetry={() => void analyze(message)}
+            className="mt-5"
+          />
+        )}
+
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          className="group mt-7 flex w-full items-center justify-between gap-3 rounded-lg bg-ink px-5 py-[18px] text-left text-paper transition-colors hover:bg-accent-ink disabled:bg-ink/25 disabled:text-paper/60"
+        >
+          <span className="flex flex-col">
+            <span className="font-display text-[19px] leading-tight">
+              {loading ? "Consultando tu historial…" : "Analizar"}
+            </span>
+            {!loading && (
+              <span className="station mt-1 text-white/45 group-disabled:text-white/40">
+                sin compromiso todavía
+              </span>
+            )}
+          </span>
+          {loading ? (
+            <Loader2 className="size-5 shrink-0 animate-spin" />
+          ) : (
+            <ArrowRight className="size-5 shrink-0 transition-transform group-hover:translate-x-1" />
+          )}
+        </button>
+      </form>
+
+      <CheckInPanel timezone={timezone} />
     </div>
+  );
+}
+
+/**
+ * Lo que quedó pendiente y ya debería haber pasado.
+ *
+ * Cierra el ciclo: sin este recordatorio la mitad de los pendientes nunca se
+ * marcan, y el motor se queda sin realidad con la que aprender.
+ */
+function CheckInPanel({ timezone }: { timezone: string }) {
+  const load = useCallback(
+    () =>
+      intentions.list({
+        status: ["PENDING"],
+        scheduled_before: new Date().toISOString(),
+        sort: "scheduled_at",
+        order: "asc",
+        limit: 3,
+      }),
+    [],
+  );
+  const { status, data } = useResource(load);
+
+  if (status === "loading") return <Shimmer className="h-24 w-full rounded-lg" />;
+
+  const items: Intention[] = data?.items ?? [];
+  if (status === "error" || items.length === 0) return null;
+
+  return (
+    <section className="flex flex-col gap-4 border-t border-rule pt-7">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="station text-ink-soft">Su hora ya pasó</h2>
+        <Link
+          href="/historial?tab=pendientes"
+          className="station inline-flex items-center gap-1 text-accent-ink hover:underline"
+        >
+          ver todo
+          <ArrowRight className="size-3" />
+        </Link>
+      </div>
+
+      <ul className="flex flex-col">
+        {items.map((item, index) => (
+          <li key={item.id} className={index > 0 ? "border-t border-rule" : ""}>
+            <Link
+              href={`/historial/${item.id}`}
+              className="group flex items-center justify-between gap-3 py-3 transition-opacity hover:opacity-70"
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-[15px] font-medium">
+                  {item.objective}
+                </span>
+                <span className="station mt-0.5 block text-ink-faint">
+                  {formatRelative(item.scheduled_at, timezone)}
+                </span>
+              </span>
+              <StatusChip status={item.status} />
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      <p className="text-[13px] leading-relaxed text-ink-soft">
+        Marcar qué pasó es lo que hace que el próximo pronóstico sea mejor.
+      </p>
+    </section>
   );
 }

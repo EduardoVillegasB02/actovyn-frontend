@@ -1,26 +1,258 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+  ESTACIÓN DE PRONÓSTICO
+  ----------------------
+  La aplicación emite un pronóstico sobre ti y enseña la evidencia. Esa idea
+  manda en el diseño y se traduce en dos mundos que conviven:
+
+  · La LOSA (slab): casi negra, a sangre, donde vive el veredicto. Es el
+    instrumento. El número vive ahí, enorme, y el color lo pone el riesgo.
+  · El PAPEL: hueso cálido, con filetes finos en vez de tarjetas, donde vive
+    la evidencia. Se lee, no se decora.
+
+  El contraste entre los dos es el diseño. Por eso no todo es una tarjeta: el
+  borde, el relleno y el radio se gastan donde hay jerarquía que marcar.
+
+  El acento (azul índigo) solo significa "esto se puede tocar". El veredicto
+  usa su propia rampa semántica, que tiene un tono para papel y otro para
+  losa, porque el mismo verde no funciona sobre los dos fondos.
+
+  Un solo mundo visual, a propósito: esto se enseña en un proyector.
+*/
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), var(--font-body), sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, Consolas, monospace;
+
+  /* Superficies */
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-slab: var(--slab);
+  --color-slab-2: var(--slab-2);
+  --color-slab-3: var(--slab-3);
+
+  /* Tinta sobre papel */
+  --color-ink: var(--ink);
+  --color-ink-mid: var(--ink-mid);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-rule-2: var(--rule-2);
+
+  /* Tinta sobre losa */
+  --color-slab-ink: var(--slab-ink);
+  --color-slab-mid: var(--slab-mid);
+  --color-slab-soft: var(--slab-soft);
+  --color-slab-rule: var(--slab-rule);
+
+  /* Acento: solo lo interactivo */
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-line: var(--accent-line);
+  --color-accent-lit: var(--accent-lit);
+
+  /* Rampa del veredicto, sobre papel */
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-alert: var(--alert);
+  --color-alert-soft: var(--alert-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-2xl: 26px;
+
+  /* Tokens que consumen los componentes de shadcn. */
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --color-card: var(--paper-2);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--slab);
+  --color-popover-foreground: var(--slab-ink);
+  --color-primary: var(--ink);
+  --color-primary-foreground: var(--paper);
+  --color-secondary: var(--rule-2);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--rule-2);
+  --color-muted-foreground: var(--ink-mid);
+  --color-accent: var(--rule-2);
+  --color-accent-foreground: var(--ink);
+  --color-destructive: var(--bad);
+  --color-border: var(--rule);
+  --color-input: var(--rule);
+  --color-ring: var(--accent-ink);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --paper: #f1f0ec;
+  --paper-2: #fbfaf8;
+  --slab: #131418;
+  --slab-2: #1d1f25;
+  --slab-3: #2a2d35;
+
+  --ink: #16171a;
+  --ink-mid: #55575e;
+  --ink-soft: #85878f;
+  --ink-faint: #a9aab1;
+  --rule: #dedbd3;
+  --rule-2: #e7e4dd;
+
+  --slab-ink: #f4f3f0;
+  --slab-mid: #a8aab3;
+  --slab-soft: #74777f;
+  --slab-rule: rgba(255, 255, 255, 0.11);
+
+  --accent-ink: #2d2be0;
+  --accent-soft: #ecebfd;
+  --accent-line: #c7c4f7;
+  /* El acento sobre la losa: sube de luz para no apagarse. */
+  --accent-lit: #9b98ff;
+
+  --good: #12844a;
+  --good-soft: #e2f1e7;
+  --warn: #a96c05;
+  --warn-soft: #f7eeda;
+  --alert: #c94d10;
+  --alert-soft: #fae8dd;
+  --bad: #bd2b2b;
+  --bad-soft: #f8e3e1;
+
+  --radius: 10px;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-synthesis-weight: none;
+    /* Textura casi invisible: el papel no es un plano perfecto. */
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      rgba(22, 23, 26, 0.022) 1px,
+      transparent 0
+    );
+    background-size: 26px 26px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent-ink);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: var(--accent-ink);
+    color: #fff;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Cifras que se comparan entre filas: siempre alineadas. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /*
+    La etiqueta de estación: mono, versalita, muy espaciada. Es la voz de los
+    instrumentos y lo que da coherencia a todas las secciones.
+  */
+  .station {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  /* Un filete, no una caja. Es el separador por defecto del papel. */
+  .rule-t {
+    border-top: 1px solid var(--rule);
+  }
+
+  /*
+    La losa: el bloque del instrumento. A sangre en móvil, con esquinas a
+    partir de sm, porque en pantalla ancha flotar le sienta mejor.
+  */
+  .slab {
+    background: var(--slab);
+    color: var(--slab-ink);
+    position: relative;
+    isolation: isolate;
+  }
+
+  /* Rejilla técnica tenue dentro de la losa. */
+  .slab-grid::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 78%);
+  }
+
+  /* Una ficha de papel, cuando de verdad hace falta separar un bloque. */
+  .sheet {
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
+  }
+}
+
+/* La entrada en escena del veredicto: una vez, al montar. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise {
+  animation: rise 560ms cubic-bezier(0.22, 0.8, 0.28, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
