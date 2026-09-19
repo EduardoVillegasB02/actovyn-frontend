@@ -2,9 +2,15 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, Search } from "lucide-react";
+import { CalendarDays, List, Loader2, Search } from "lucide-react";
 import { EmptyState, ErrorState, Shimmer } from "@/components/states";
 import { IntentionRow } from "@/components/intention-row";
+import {
+  MonthCalendar,
+  monthRange,
+  thisMonth,
+  type CalendarMonth,
+} from "@/components/month-calendar";
 import {
   ApiError,
   intentions as api,
@@ -42,6 +48,12 @@ function Historial() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [closing, setClosing] = useState<Record<string, boolean>>({});
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+
+  // El calendario es otra pregunta, no otro filtro: trae su propio mes.
+  const [view, setView] = useState<"lista" | "calendario">("lista");
+  const [monthCursor, setMonthCursor] = useState<CalendarMonth>(() => thisMonth());
+  const [monthItems, setMonthItems] = useState<Intention[] | null>(null);
+  const [monthLoading, setMonthLoading] = useState(false);
 
   // La búsqueda espera a que el usuario deje de escribir.
   useEffect(() => {
@@ -82,6 +94,33 @@ function Historial() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const monthFetcher = useCallback(async () => {
+    const { from, to } = monthRange(monthCursor);
+    return api.list({ from, to, sort: "scheduled_at", order: "asc", limit: 100 });
+  }, [monthCursor]);
+
+  // Se deja fuera de useResource porque la vista lista y la de calendario
+  // comparten pantalla y no deben pisarse el estado de carga.
+  useEffect(() => {
+    if (view !== "calendario") return;
+    let alive = true;
+    const run = async () => {
+      setMonthLoading(true);
+      try {
+        const page = await monthFetcher();
+        if (alive) setMonthItems(page.items);
+      } catch {
+        if (alive) setMonthItems([]);
+      } finally {
+        if (alive) setMonthLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      alive = false;
+    };
+  }, [view, monthFetcher]);
 
   const loadMore = useCallback(async () => {
     if (!cursor || loadingMore) return;
@@ -156,11 +195,51 @@ function Historial() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-5 pt-9">
-      <header className="flex flex-col gap-2">
-        <p className="station text-ink-soft">predicción vs. realidad</p>
-        <h1 className="text-[34px] leading-[0.98] sm:text-[42px]">Historial</h1>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <p className="station text-ink-soft">predicción vs. realidad</p>
+          <h1 className="text-[34px] leading-[0.98] sm:text-[42px]">Historial</h1>
+        </div>
+
+        <div
+          role="tablist"
+          aria-label="Forma de ver el historial"
+          className="flex items-center gap-1 rounded-lg border border-rule bg-paper-2 p-1"
+        >
+          {([
+            { key: "lista", label: "Lista", Icon: List },
+            { key: "calendario", label: "Calendario", Icon: CalendarDays },
+          ] as const).map(({ key, label, Icon }) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={view === key}
+              onClick={() => setView(key)}
+              className={cn(
+                "station flex items-center gap-1.5 rounded-md px-2.5 py-2 transition-colors",
+                view === key
+                  ? "bg-ink text-paper"
+                  : "text-ink-faint hover:text-ink",
+              )}
+            >
+              <Icon className="size-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
       </header>
 
+      {view === "calendario" ? (
+        <MonthCalendar
+          items={monthItems ?? []}
+          timezone={timezone}
+          cursor={monthCursor}
+          onCursorChange={setMonthCursor}
+          loading={monthLoading || monthItems === null}
+        />
+      ) : (
+      <>
       <div className="flex flex-col gap-4">
         <div
           role="tablist"
@@ -256,6 +335,8 @@ function Historial() {
             </button>
           )}
         </>
+      )}
+      </>
       )}
     </div>
   );

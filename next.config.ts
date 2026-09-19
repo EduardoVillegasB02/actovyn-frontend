@@ -17,6 +17,10 @@ import type { NextConfig } from "next";
 const API_ORIGIN = process.env.API_ORIGIN ?? "http://localhost:3025";
 
 const nextConfig: NextConfig = {
+  // El distintivo flotante de desarrollo tapa la esquina y sale en las
+  // capturas. En una demo estorba más de lo que informa.
+  devIndicators: false,
+
   async rewrites() {
     return [
       {

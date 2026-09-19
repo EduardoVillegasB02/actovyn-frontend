@@ -64,6 +64,12 @@ export function formatShortDate(iso: string | null | undefined, tz: string): str
   return format(iso, tz, { day: "numeric", month: "short" }).replace(/\.$/, "");
 }
 
+/** Clave 'YYYY-MM-DD' del día local de un ISO. Agrupa sin mirar la hora. */
+export function dayKeyOf(iso: string | null | undefined, tz: string): string | null {
+  const date = parse(iso);
+  return date ? dayKey(date, tz) : null;
+}
+
 /** Clave 'YYYY-MM-DD' del día local, para comparar fechas sin horas. */
 function dayKey(date: Date, tz: string): string {
   try {

@@ -4,10 +4,11 @@ import {
   useCallback,
   useEffect,
   useRef,
+  useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, NotepadText, Timer, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +34,13 @@ function clamp(value: number, max: number): number {
   return Math.min(value, max);
 }
 
-export function Deck({ slides }: { slides: ReactNode[] }) {
+export interface Slide {
+  content: ReactNode;
+  /** Lo que dices tú, no lo que se proyecta. Se abre con la tecla n. */
+  notes?: string;
+}
+
+export function Deck({ slides }: { slides: Slide[] }) {
   const router = useRouter();
   const hash = useSyncExternalStore(subscribeHash, readHash, readHashOnServer);
   const last = slides.length - 1;
@@ -41,6 +48,24 @@ export function Deck({ slides }: { slides: ReactNode[] }) {
 
   const surface = useRef<HTMLDivElement>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const [showNotes, setShowNotes] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+
+  // El cronómetro corre solo cuando se pide: en veinte minutos, saber que vas
+  // por el minuto doce importa más que cualquier lámina.
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => setElapsed((value) => value + 1), 1000);
+    return () => clearInterval(id);
+  }, [running]);
+
+  const toggleTimer = useCallback(() => {
+    setRunning((value) => {
+      if (!value) setElapsed(0);
+      return !value;
+    });
+  }, []);
 
   const goTo = useCallback(
     (next: number) => {
@@ -79,6 +104,12 @@ export function Deck({ slides }: { slides: ReactNode[] }) {
         case "Escape":
           router.push("/");
           break;
+        case "n":
+          setShowNotes((value) => !value);
+          break;
+        case "t":
+          toggleTimer();
+          break;
         case "f":
           // Pantalla completa: una tecla, porque en el escenario no hay tiempo.
           void (document.fullscreenElement
@@ -92,7 +123,7 @@ export function Deck({ slides }: { slides: ReactNode[] }) {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [next, prev, goTo, last, router]);
+  }, [next, prev, goTo, last, router, toggleTimer]);
 
   function onTouchStart(event: React.TouchEvent) {
     const touch = event.changedTouches[0];
@@ -138,13 +169,26 @@ export function Deck({ slides }: { slides: ReactNode[] }) {
         aria-roledescription="lámina"
         aria-label={`Lámina ${index + 1} de ${slides.length}`}
       >
-        <div className="mx-auto w-full max-w-4xl">{slides[index]}</div>
+        <div className="mx-auto w-full max-w-4xl">{slides[index].content}</div>
       </div>
 
       {/* Controles: discretos, pero suficientes para dar la charla con el ratón. */}
       <div className="absolute inset-x-0 bottom-0 z-20 flex items-center justify-between gap-4 px-5 pb-5 sm:px-8 sm:pb-6">
-        <span className="station tnum text-slab-soft">
-          {String(index + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
+        <span className="flex items-center gap-4">
+          <span className="station tnum text-slab-soft">
+            {String(index + 1).padStart(2, "0")} /{" "}
+            {String(slides.length).padStart(2, "0")}
+          </span>
+          {running && (
+            <span
+              className="station tnum flex items-center gap-1.5 text-[--accent-lit]"
+              role="timer"
+            >
+              <Timer className="size-3.5" />
+              {String(Math.floor(elapsed / 60)).padStart(2, "0")}:
+              {String(elapsed % 60).padStart(2, "0")}
+            </span>
+          )}
         </span>
 
         <div className="flex items-center gap-2">
@@ -154,14 +198,30 @@ export function Deck({ slides }: { slides: ReactNode[] }) {
           <DeckButton onClick={next} disabled={index === last} label="Siguiente">
             <ChevronRight className="size-5" />
           </DeckButton>
+          <DeckButton
+            onClick={() => setShowNotes((value) => !value)}
+            label="Notas del orador"
+            active={showNotes}
+          >
+            <NotepadText className="size-5" />
+          </DeckButton>
           <DeckButton onClick={() => router.push("/")} label="Salir de la presentación">
             <X className="size-5" />
           </DeckButton>
         </div>
       </div>
 
+      {showNotes && slides[index].notes && (
+        <aside className="absolute inset-x-0 bottom-0 z-10 border-t border-slab-rule bg-black/85 px-6 pb-24 pt-5 backdrop-blur sm:px-14">
+          <p className="station mb-2 text-[--accent-lit]">para ti, no se proyecta</p>
+          <p className="mx-auto max-w-4xl text-[15px] leading-[1.6] text-slab-mid">
+            {slides[index].notes}
+          </p>
+        </aside>
+      )}
+
       <p className="station absolute bottom-6 left-1/2 hidden -translate-x-1/2 text-slab-soft/60 lg:block">
-        ← → para navegar · f para pantalla completa · esc para salir
+        ← → navegar · n notas · t cronómetro · f pantalla completa · esc salir
       </p>
     </div>
   );
@@ -170,11 +230,13 @@ export function Deck({ slides }: { slides: ReactNode[] }) {
 function DeckButton({
   onClick,
   disabled = false,
+  active = false,
   label,
   children,
 }: {
   onClick: () => void;
   disabled?: boolean;
+  active?: boolean;
   label: string;
   children: ReactNode;
 }) {
@@ -187,6 +249,7 @@ function DeckButton({
       className={cn(
         "grid size-11 place-items-center rounded-full border border-slab-rule text-slab-mid transition-colors",
         "hover:border-slab-soft hover:text-slab-ink disabled:opacity-25 disabled:hover:border-slab-rule",
+        active && "border-[--accent-lit] text-[--accent-lit]",
       )}
     >
       {children}
